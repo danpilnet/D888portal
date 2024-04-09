@@ -1,5 +1,5 @@
 from datetime import datetime
-from django.views.generic import ListView, DetailView, CreateView, DeleteView, UpdateView, TemplateView
+from django.views.generic import ListView, DetailView, CreateView, DeleteView, UpdateView
 from news. models import Post
 from. forms import PostForm
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
@@ -35,13 +35,13 @@ class ArticlesDetail(DetailView):
 
 
 
-class ArticlesCreate(PermissionRequiredMixin,CreateView):
+class ArticlesCreate(PermissionRequiredMixin, LoginRequiredMixin, CreateView):
     form_class = PostForm
     model = Post
     template_name = 'news_create.html'
     context_object_name = 'create'
     success_url = '/articles/'
-    permission_required = ('articles.add_post',)
+    permission_required = 'news.add_post'
 
     def form_valid(self, form):
         post = form.save(commit=False)
@@ -51,13 +51,13 @@ class ArticlesCreate(PermissionRequiredMixin,CreateView):
         return super().form_valid(form)
 
 
-class ArticlesEdit(PermissionRequiredMixin,UpdateView, LoginRequiredMixin, TemplateView):
+class ArticlesEdit(PermissionRequiredMixin,UpdateView, LoginRequiredMixin):
     form_class = PostForm
     model = Post
     template_name = 'news_edit.html'
     context_object_name = 'edit'
     success_url = '/articles/'
-    permission_required = ('articles.change_post',)
+    permission_required = 'news.change_post'
 
 class ArticlesDelete(DeleteView):
     model = Post

@@ -1,9 +1,15 @@
 from datetime import datetime
-from django.views.generic import ListView, DetailView, CreateView, DeleteView, UpdateView, TemplateView
-from.models import Post
+from django.views.generic import ListView, DetailView, CreateView, DeleteView, UpdateView
+from.models import Post, Category, Subscribe
 from .filters import PostFilter
 from. forms import PostForm
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.views import View
+from django.shortcuts import redirect, render
+
+
 
 
 
@@ -54,13 +60,13 @@ class PostSearch(ListView):
         return context
 
 
-class PostCreate(PermissionRequiredMixin,CreateView):
+class PostCreate(PermissionRequiredMixin, CreateView, LoginRequiredMixin):
     form_class = PostForm
     model = Post
     template_name = 'news_create.html'
     context_object_name = 'create'
     success_url = '/news/'
-    permission_required = ('news.add_post',)
+    permission_required = 'news.add_post'
 
 
     def form_valid(self, form):
@@ -70,17 +76,28 @@ class PostCreate(PermissionRequiredMixin,CreateView):
         post.save()
         return super().form_valid(form)
 
+        sub = Subscribe.objects.all()
+        for i in sub:
+            if i.category_sb == form.cleaned_data.get('category_sb')[0]:
+                html_content = render_to_string('message.html', {'post':post})
+                message = EmailMultiAlternatives(subject='Новый пост', from_email='danpilnet@yandex.ru', to=[i.user.email])
+                message.attach_alternative(html_content, 'text/html')
+                message.send()
+
+
+        return super().form_valid(form)
 
 
 
 
-class PostEdit(PermissionRequiredMixin,UpdateView, LoginRequiredMixin, TemplateView):
+
+class PostEdit(PermissionRequiredMixin,UpdateView, LoginRequiredMixin):
     form_class = PostForm
     model = Post
     template_name = 'news_edit.html'
     context_object_name = 'edit'
     success_url = '/news/'
-    permission_required = ('news.change_post')
+    permission_required = 'news.change_post'
 
 class PostDelete(DeleteView):
     model = Post
@@ -88,3 +105,14 @@ class PostDelete(DeleteView):
     context_object_name = 'delete'
     success_url = '/news/'
 
+
+
+class GetSub(LoginRequiredMixin, View):
+    def get(self,request,*args,**kwargs):
+        return render(request,'subscribe.html', {'categories':Category.objects.all()})
+
+
+    def post(self,request,*args,**kwargs):
+        save_table = Subscribe(user_id=request.user.pk, category_sb_id=request.POST.get('category_sb'))
+        save_table.save()
+        return redirect('subscribe')
